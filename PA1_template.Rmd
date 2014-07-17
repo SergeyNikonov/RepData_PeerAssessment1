@@ -1,20 +1,73 @@
-# Reproducible Research: Peer Assessment 1
+##Assignment 1
+###Loading and preprocessing the data
+```{r}
+library(knitr, XML)
+act <- read.csv(file="activity.csv")
+```
 
+###What is mean total number of steps taken per day?
+```{r,results='asis'}
+library(xtable)
+means <- aggregate(act[,1], list(act[,2]), mean)
+medians <- aggregate(act[,1], list(act[,2]), median)
+tab<-cbind(means, medians[2])
+colnames(tab) <- c("date", "mean", "median")
+tab <- xtable(tab)
+```
 
-## Loading and preprocessing the data
+```{r, results='asis'}
+print(tab, type="html")
+hist(means[,2], main="Steps taken per day, means", xlab="")
+```
 
+###What is the average daily activity pattern?
+```{r, results='asis'}
+dp <- by(act[,1], act[,3], mean,  simplify=T, na.rm=T)
+dp <- as.data.frame(as.table(dp), stringsAsFactors=F)
+plot(dp[,1], dp[,2], type="l", xlab="interval", ylab="steps",main="Average daily activity pattern")
+```
 
+**`r dp[dp[,2]==max(dp[,2]), 1]`** interval contains the maximum number of steps (`r max(dp[,2])`)
 
-## What is mean total number of steps taken per day?
+###Imputing missing values
 
+Data contains `r table(is.na(act))[2]` NAs.
+To fill empty fields we will use average for interval.
 
+```{r, results='asis'}
 
-## What is the average daily activity pattern?
+act_new <-act
+act_new[is.na(act_new),1] <- dp[,2, act_new[,3]==dp[1]]
+means_new <- aggregate(act_new[,1], list(act_new[,2]), mean)
+medians_new <- aggregate(act_new[,1], list(act_new[,2]), median)
+tab<-cbind(means_new, medians_new[2])
+colnames(tab) <- c("date", "mean", "median")
+tab <- xtable(tab)
+```
 
+***Average number of steps per day***
 
+```{r, results='asis'}
+print(tab, type="html")
+par(mfrow=c(1,2))
+hist(means[,2], main="Steps taken per day, means",
+     xlab="", ylim=c(1,30))
+hist(means_new[,2], main="Steps taken per day, means_new",
+     xlab="", ylim=c(1,30))
 
-## Imputing missing values
+```
 
+As we can see, imputing missing values changes resulting numbers.
 
+###Are there differences in activity patterns between weekdays and weekends?
+```{r}
+library(lattice)
+Sys.setlocale(category = "LC_TIME", locale = "USA")
+act_new$date <- strptime(act_new$date, format="%Y-%m-%d")
+act_new$wd <- ifelse(weekdays(act_new[,2])%in%c("Saturday", "Sunday"), "weekend", "weekday")
+wdp <- aggregate(act_new[,1], list(act_new[,3], act_new[,4]), mean)
+xyplot(wdp[,3] ~  wdp[,1]| wdp[,2], layout=c(1,2), type="l", xlab="interval", ylab="steps", main="Activity patterns for weekdays and weekend")
+```
 
-## Are there differences in activity patterns between weekdays and weekends?
+As we can see, activity patterns for weekdays and weekends are different.
+Weekand pattern has more distributed activity spikes.
